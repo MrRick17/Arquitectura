@@ -1,0 +1,70 @@
+\documentclass[10pt,landscape]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.4in]{geometry}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+\title{MIPS32 Reference Sheet - Arquitectura de Computadores}
+\author{Rick}
+\date{\today}
+
+\begin{document}
+
+\begin{center}
+    \textbf{\Large MIPS32 Reference Sheet | Resumen de Instrucciones y Registros}
+\end{center}
+
+\begin{multicols}{2}
+
+\section*{Aritméticas y Memoria}
+\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
+\toprule
+\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
+add & \texttt{\$d, \$s, \$t} & Suma registros: \texttt{\$d = \$s + \$t} & \texttt{add \$s0, \$s1, \$s2} \\ \addlinespace
+addi & \texttt{\$t, \$s, imm} & Suma registro e inmediato (con signo) & \texttt{addi \$s1, \$s2, 10} \\ \addlinespace
+lw & \texttt{\$t, off(\$s)} & Carga palabra de RAM a registro & \texttt{lw \$t0, 4(\$sp)} \\ \addlinespace
+sw & \texttt{\$t, off(\$s)} & Guarda palabra de registro en RAM & \texttt{sw \$t1, 8(\$sp)} \\ \bottomrule
+\end{tabular}
+
+\section*{Lógica y Desplazamiento}
+\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
+\toprule
+\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
+and & \texttt{\$d, \$s, \$t} & AND bit a bit entre dos registros & \texttt{and \$t0, \$t1, \$t2} \\ \addlinespace
+or & \texttt{\$d, \$s, \$t} & OR bit a bit entre dos registros & \texttt{or \$t0, \$t1, \$t2} \\ \addlinespace
+nor & \texttt{\$d, \$s, \$t} & NOR bit a bit (útil para NOT) & \texttt{nor \$t0, \$t1, \$t2} \\ \addlinespace
+sll & \texttt{\$d, \$t, shamt} & Desplazamiento izq. (Mult. por $2^n$) & \texttt{sll \$s0, \$s1, 2} \\ \addlinespace
+srl & \texttt{\$d, \$t, shamt} & Desplazamiento der. (Div. por $2^n$) & \texttt{srl \$s0, \$s1, 2} \\ \bottomrule
+\end{tabular}
+
+\section*{Saltos y Comparación}
+\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
+\toprule
+\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
+beq & \texttt{\$s, \$t, L1} & Salta a L1 si \texttt{\$s == \$t} & \texttt{beq \$s0, \$s1, Exit} \\ \addlinespace
+bne & \texttt{\$s, \$t, L1} & Salta a L1 si \texttt{\$s != \$t} & \texttt{bne \$s0, \$s1, Loop} \\ \addlinespace
+slt & \texttt{\$d, \$s, \$t} & \texttt{\$d=1} si \texttt{\$s < \$t}, sino \texttt{\$d=0} & \texttt{slt \$t0, \$s0, \$s1} \\ \addlinespace
+slti & \texttt{\$t, \$s, imm} & \texttt{\$t=1} si \texttt{\$s < imm}, sino \texttt{0} & \texttt{slti \$t0, \$s0, 5} \\ \addlinespace
+j & \texttt{label} & Salta incondicionalmente a la etiqueta & \texttt{j main} \\ \addlinespace
+jal & \texttt{label} & Salta a función y guarda retorno en \texttt{\$ra} & \texttt{jal MiFuncion} \\ \addlinespace
+jr & \texttt{\$s} & Salta a la dirección contenida en \texttt{\$s} & \texttt{jr \$ra} \\ \bottomrule
+\end{tabular}
+
+\section*{Registros MIPS (32 bits)}
+\begin{tabular}{@{}lll p{3.5cm}@{}}
+\toprule
+\textbf{Nombre} & \textbf{Num.} & \textbf{Uso} & \textbf{Preservado?} \\ \midrule
+\$zero & 0 & Constante cero & N/A \\
+\$v0-\$v1 & 2-3 & Valores de retorno / Syscall & No \\
+\$a0-\$a3 & 4-7 & Argumentos de funciones & No \\
+\$t0-\$t9 & 8-15 & Temporales (uso rápido) & No \\
+\$s0-\$s7 & 16-23 & Salvados (uso a largo plazo) & Sí \\
+\$sp & 29 & Puntero de Pila (Stack) & Sí \\
+\$ra & 31 & Dirección de retorno & Sí \\
+\bottomrule
+\end{tabular}
+
+\end{multicols}
+\end{document}

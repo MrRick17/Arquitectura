@@ -1,70 +1,94 @@
-\documentclass[10pt,landscape]{article}
+\documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
-\usepackage[margin=0.4in]{geometry}
-\usepackage{multicol}
-\usepackage{array}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{xcolor}
 
-\title{MIPS32 Reference Sheet - Arquitectura de Computadores}
+\title{Resumen de Fórmulas: Prestaciones del Computador (Sección 1.4)}
 \author{Rick}
 \date{\today}
 
 \begin{document}
 
+\maketitle
+
+\section{Conceptos Fundamentales de Rendimiento}
+En arquitectura de computadores, la velocidad se mide a través del \textbf{Tiempo de Ejecución} (el tiempo real que tarda en completarse una tarea). La \textbf{Prestación (Performance)} se define como el inverso de dicho tiempo.
+
+\begin{equation}
+    \text{Prestación}_X = \frac{1}{\text{Tiempo de Ejecución}_X}
+End{equation}
+
+Para comparar el rendimiento relativo entre dos máquinas $X$ e $Y$ (determinar cuántas veces es más rápida la máquina $X$ que la máquina $Y$), utilizamos la siguiente relación:
+\begin{equation}
+    n = \frac{\text{Prestación}_X}{\text{Prestación}_Y} = \frac{\text{Tiempo de Ejecución}_Y}{\text{Tiempo de Ejecución}_X}
+\end{equation}
+
+\section{Ecuación del Tiempo de CPU}
+El tiempo que el procesador dedica exclusivamente a ejecutar las instrucciones de un programa se calcula vinculando los ciclos de reloj necesarios con la velocidad del reloj.
+
+\begin{equation}
+    \text{Tiempo de CPU} = \text{Ciclos de Reloj de CPU} \times \text{Tiempo de Ciclo de Reloj}
+\end{equation}
+
+Dado que la frecuencia de reloj ($f$) es el inverso del tiempo de ciclo ($f = \frac{1}{\text{Tiempo de Ciclo}}$), también se expresa como:
+\begin{equation}
+    \text{Tiempo de CPU} = \frac{\text{Ciclos de Reloj de CPU}}{\text{Frecuencia de Reloj}}
+\end{equation}
+
+\section{La Ecuación Clásica de Rendimiento (Las 3 Componentes)}
+Los ciclos de reloj totales dependen directamente del número de instrucciones del programa y del promedio de ciclos que toma cada instrucción, conocido como \textbf{CPI} (\textit{Cycles Per Instruction}).
+
+\begin{equation}
+    \text{Ciclos de Reloj de CPU} = \text{Número de Instrucciones} \times \text{CPI}
+\end{equation}
+
+Al combinar las fórmulas anteriores, obtenemos la ecuación fundamental para el análisis de prestaciones:
+\begin{equation}
+    \text{Tiempo de CPU} = \text{Número de Instrucciones} \times \text{CPI} \times \text{Tiempo de Ciclo}
+\end{equation}
+
+\begin{equation}
+    \text{Tiempo de CPU} = \frac{\text{Número de Instrucciones} \times \text{CPI}}{\text{Frecuencia de Reloj}}
+\end{equation}
+
+\section{CPI Global o Promedio}
+Cuando un programa ejecuta diferentes tipos de instrucciones (aritméticas, saltos, memoria) y cada tipo requiere un número distinto de ciclos, el CPI global se calcula mediante un promedio ponderado:
+
+\begin{equation}
+    \text{Ciclos de Reloj Totales} = \sum_{i=1}^{n} (\text{CPI}_i \times \text{Conteo de Instrucciones}_i)
+\end{equation}
+
+\begin{equation}
+    \text{CPI Promedio} = \frac{\sum_{i=1}^{n} (\text{CPI}_i \times \text{Conteo de Instrucciones}_i)}{\text{Número Total de Instrucciones}}
+\end{equation}
+
+\section{Métricas Derivadas y Ley de Amdahl}
+
+\subsection{MIPS (Millones de Instrucciones por Segundo)}
+Es una métrica histórica para medir la tasa de ejecución de instrucciones, aunque el libro explica por qué puede ser engañosa al comparar arquitecturas distintas:
+\begin{equation}
+    \text{MIPS} = \frac{\text{Número de Instrucciones}}{\text{Tiempo de Ejecución} \times 10^6} = \frac{\text{Frecuencia de Reloj}}{\text{CPI} \times 10^6}
+\end{equation}
+
+\subsection{Ley de Amdahl}
+Se utiliza para calcular la ganancia de velocidad real que se obtiene al mejorar únicamente una parte o componente específico de un computador:
+\begin{equation}
+    \text{Tiempo de Ejecución Nuevo} = \frac{\text{Tiempo Afectado por la Mejora}}{\text{Factor de Mejora}} + \text{Tiempo No Afectado}
+\end{equation}
+
+\section{Guía de Variables y Unidades}
 \begin{center}
-    \textbf{\Large MIPS32 Reference Sheet | Resumen de Instrucciones y Registros}
-\end{center}
-
-\begin{multicols}{2}
-
-\section*{Aritméticas y Memoria}
-\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
+\begin{tabular}{lll}
 \toprule
-\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
-add & \texttt{\$d, \$s, \$t} & Suma registros: \texttt{\$d = \$s + \$t} & \texttt{add \$s0, \$s1, \$s2} \\ \addlinespace
-addi & \texttt{\$t, \$s, imm} & Suma registro e inmediato (con signo) & \texttt{addi \$s1, \$s2, 10} \\ \addlinespace
-lw & \texttt{\$t, off(\$s)} & Carga palabra de RAM a registro & \texttt{lw \$t0, 4(\$sp)} \\ \addlinespace
-sw & \texttt{\$t, off(\$s)} & Guarda palabra de registro en RAM & \texttt{sw \$t1, 8(\$sp)} \\ \bottomrule
-\end{tabular}
-
-\section*{Lógica y Desplazamiento}
-\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
-\toprule
-\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
-and & \texttt{\$d, \$s, \$t} & AND bit a bit entre dos registros & \texttt{and \$t0, \$t1, \$t2} \\ \addlinespace
-or & \texttt{\$d, \$s, \$t} & OR bit a bit entre dos registros & \texttt{or \$t0, \$t1, \$t2} \\ \addlinespace
-nor & \texttt{\$d, \$s, \$t} & NOR bit a bit (útil para NOT) & \texttt{nor \$t0, \$t1, \$t2} \\ \addlinespace
-sll & \texttt{\$d, \$t, shamt} & Desplazamiento izq. (Mult. por $2^n$) & \texttt{sll \$s0, \$s1, 2} \\ \addlinespace
-srl & \texttt{\$d, \$t, shamt} & Desplazamiento der. (Div. por $2^n$) & \texttt{srl \$s0, \$s1, 2} \\ \bottomrule
-\end{tabular}
-
-\section*{Saltos y Comparación}
-\begin{tabular}{@{}p{1.1cm} p{2.2cm} p{4.2cm} p{2.8cm}@{}}
-\toprule
-\textbf{Mne.} & \textbf{Sintaxis} & \textbf{Descripción} & \textbf{Ejemplo} \\ \midrule
-beq & \texttt{\$s, \$t, L1} & Salta a L1 si \texttt{\$s == \$t} & \texttt{beq \$s0, \$s1, Exit} \\ \addlinespace
-bne & \texttt{\$s, \$t, L1} & Salta a L1 si \texttt{\$s != \$t} & \texttt{bne \$s0, \$s1, Loop} \\ \addlinespace
-slt & \texttt{\$d, \$s, \$t} & \texttt{\$d=1} si \texttt{\$s < \$t}, sino \texttt{\$d=0} & \texttt{slt \$t0, \$s0, \$s1} \\ \addlinespace
-slti & \texttt{\$t, \$s, imm} & \texttt{\$t=1} si \texttt{\$s < imm}, sino \texttt{0} & \texttt{slti \$t0, \$s0, 5} \\ \addlinespace
-j & \texttt{label} & Salta incondicionalmente a la etiqueta & \texttt{j main} \\ \addlinespace
-jal & \texttt{label} & Salta a función y guarda retorno en \texttt{\$ra} & \texttt{jal MiFuncion} \\ \addlinespace
-jr & \texttt{\$s} & Salta a la dirección contenida en \texttt{\$s} & \texttt{jr \$ra} \\ \bottomrule
-\end{tabular}
-
-\section*{Registros MIPS (32 bits)}
-\begin{tabular}{@{}lll p{3.5cm}@{}}
-\toprule
-\textbf{Nombre} & \textbf{Num.} & \textbf{Uso} & \textbf{Preservado?} \\ \midrule
-\$zero & 0 & Constante cero & N/A \\
-\$v0-\$v1 & 2-3 & Valores de retorno / Syscall & No \\
-\$a0-\$a3 & 4-7 & Argumentos de funciones & No \\
-\$t0-\$t9 & 8-15 & Temporales (uso rápido) & No \\
-\$s0-\$s7 & 16-23 & Salvados (uso a largo plazo) & Sí \\
-\$sp & 29 & Puntero de Pila (Stack) & Sí \\
-\$ra & 31 & Dirección de retorno & Sí \\
+\textbf{Variable} & \textbf{Significado} & \textbf{Unidad Común} \\ \midrule
+$IC$ & Conteo de Instrucciones (\textit{Instruction Count}) & Instrucciones \\
+$CPI$ & Ciclos por Instrucción & Ciclos / Instrucción \\
+$T_c$ & Tiempo de Ciclo de Reloj & Segundos ($s$), Nanosegundos ($ns$) \\
+$f$ & Frecuencia de Reloj (\textit{Clock Rate}) & Hertz ($Hz$), Gigahertz ($GHz$) \\
 \bottomrule
 \end{tabular}
+\end{center}
 
-\end{multicols}
 \end{document}

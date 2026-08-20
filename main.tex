@@ -3,10 +3,9 @@
 \usepackage[spanish]{babel}
 \usepackage{geometry}
 \geometry{a4paper, margin=2.54cm}
-\usepackage{titling}
 
-\title{Práctica de Laboratorio 1: Lenguaje Ensamblador MIPS32}
-\author{Richard 31.795.310}
+\title{Práctica de Laboratorio 2: Algoritmos de Ordenamiento en MIPS32}
+\author{Estudiante de Arquitectura del Computador}
 \date{\today}
 
 \begin{document}
@@ -15,31 +14,54 @@
 
 \section{Respuestas al Cuestionario}
 
-\subsection{1. Implementación de recursividad y el papel de la pila (\$sp)}
-La recursividad en MIPS32 se implementa mediante la instrucción de salto y enlace \texttt{jal}, la cual permite que una subrutina se llame a sí misma. El registro de la pila (\texttt{\$sp}) cumple un papel crítico: actúa como la estructura de memoria donde se guarda el estado de cada llamada (el \textit{stack frame}). Antes de cada llamada recursiva, se deben guardar en la pila la dirección de retorno (\texttt{\$ra}) y los argumentos (\texttt{\$a0}), para que no sean sobrescritos, permitiendo restaurarlos al regresar de cada nivel recursivo.
+\subsection{1. Registros temporales vs. guardados}
+Los registros temporales (\texttt{\$t0-\$t9}) son volátiles; no se garantiza que su valor se mantenga tras llamar a una subrutina. Los registros guardados (\texttt{\$s0-\$s7}) deben preservar su valor; si una función los usa, debe respaldarlos en la pila. En la práctica, se usaron \texttt{\$t} para contadores rápidos de los ciclos y \texttt{\$s} (como \texttt{\$s0} en Mergesort para el punto medio) respaldados en la pila, asegurando que las llamadas recursivas no corrompieran los datos.
 
-\subsection{2. Riesgos de desbordamiento y mitigación}
-El principal riesgo es el \textit{Stack Overflow} (desbordamiento de pila). Ocurre si la recursividad es infinita (falta de un caso base sólido) o si el valor de entrada $n$ es excesivamente grande, agotando la memoria RAM asignada para la pila. Se mitiga validando estrictamente las entradas (asegurando que $n$ sea un número entero positivo y dentro de límites seguros) y verificando que el caso base siempre sea alcanzable.
+\subsection{2. Uso de \$a0-\$a3, \$v0-\$v1 y \$ra}
+Los registros \texttt{\$a0-\$a3} se utilizaron estrictamente para pasar argumentos a las funciones (dirección base, índice inicial y final). El registro \texttt{\$v0} se usó para retornar el índice del pivote en Quicksort y para los códigos de \texttt{syscall}. El registro \texttt{\$ra} (\textit{Return Address}) guardó la dirección de retorno en cada salto (\texttt{jal}), siendo respaldado en la pila en cada llamada recursiva para evitar perder el flujo de ejecución.
 
-\subsection{3. Diferencias entre implementación iterativa y recursiva}
-En cuanto al uso de memoria, la versión iterativa es sumamente eficiente, ya que la huella de memoria es constante ($O(1)$); no utiliza la memoria de la pila. La versión recursiva exige reservar memoria dinámicamente ($O(n)$) para cada llamada. A nivel de registros, la recursiva impone guardar y cargar constantemente desde la pila (\texttt{sw} y \texttt{lw}), mientras que la iterativa solo mantiene los valores vivos en los registros temporales (\texttt{\$t0}, \texttt{\$t1}).
+\subsection{3. Registros vs. Memoria en el rendimiento}
+Acceder a registros toma 1 ciclo de reloj, mientras que acceder a la memoria (instrucciones \texttt{lw} y \texttt{sw}) introduce latencias significativas. Los algoritmos de ordenamiento penalizan el rendimiento al tener que realizar múltiples operaciones de memoria para intercambiar (swaps) elementos del arreglo y gestionar la pila en las llamadas recursivas.
 
-\subsection{4. Ejemplos académicos vs. ejercicio operativo}
-Los ejemplos académicos del libro suelen mostrar solo el algoritmo desnudo. Un ejercicio completo y operativo requiere un bloque \texttt{main}, llamadas al sistema operativo (\texttt{syscall}) para imprimir resultados y terminar el proceso limpiamente (código 10), y un manejo riguroso del almacenamiento local en memoria para no corromper la ejecución.
+\subsection{4. Impacto de estructuras de control (saltos y bucles)}
+Los saltos condicionales (\texttt{beq}, \texttt{bge}) pueden causar "Riesgos de Control" en el \textit{pipeline} (segmentación) del procesador. Cada vez que el procesador predice mal un salto en los bucles de ordenamiento, debe vaciar la tubería, lo que disminuye el rendimiento general del algoritmo en MIPS32.
 
-\subsection{5. Tutorial de ejecución paso a paso en MARS}
-Para depurar en MARS:
-\begin{enumerate}
-    \item Abrir el archivo y compilar presionando \textbf{F3} (Assemble).
-    \item Presionar \textbf{F7} (Step) para ejecutar instrucción por instrucción.
-    \item Observar el panel derecho (\textit{Registers}) para monitorear los cambios en \texttt{\$a0} y \texttt{\$v0}.
-    \item Revisar el valor de \texttt{\$sp} para comprobar cómo decrece al apilar y crece al desapilar.
-\end{enumerate}
+\subsection{5. Complejidad computacional Quicksort vs Mergesort}
+Ambos tienen una complejidad promedio de $O(n \log n)$. Sin embargo, Quicksort puede degradarse a $O(n^2)$ en el peor de los casos, pero opera "in-place" (no requiere memoria extra). Mergesort garantiza $O(n \log n)$ siempre, pero exige $O(n)$ de memoria adicional. En MIPS32, esto implicó declarar un arreglo extra (\texttt{temp}) en la sección \texttt{.data} para Mergesort, incrementando el consumo de RAM.
 
-\subsection{6. Justificación del enfoque}
-Para este problema en específico, el \textbf{enfoque iterativo} es superior en eficiencia y claridad en MIPS. La alternancia de paridad requiere simplemente operaciones lógicas o aritméticas básicas. La recursividad añade una latencia innecesaria por la sobrecarga de accesos a memoria (\texttt{sw}/\texttt{lw}) para mantener la pila, sin aportar un beneficio algorítmico real para un problema lineal.
+\subsection{6. Fases del ciclo de ejecución (Camino de datos)}
+Las 5 fases clásicas son: 
+1) \textbf{IF (Búsqueda):} Extrae la instrucción de memoria.
+2) \textbf{ID (Decodificación):} Interpreta la instrucción y lee registros.
+3) \textbf{EX (Ejecución):} La ALU realiza cálculos lógicos o aritméticos.
+4) \textbf{MEM (Memoria):} Lectura o escritura en la memoria de datos.
+5) \textbf{WB (Escritura):} Guarda el resultado final en el banco de registros.
 
-\subsection{7. Análisis y Discusión de los Resultados}
-Se demostró que ambas implementaciones logran el mismo resultado lógico, cumpliendo con la fórmula matemática propuesta. Sin embargo, la observación de los registros en MARS confirma que la carga computacional en el procesador (ciclos de reloj utilizados en accesos a memoria) es significativamente mayor en el modelo recursivo, destacando la importancia de elegir iteraciones para procesos repetitivos simples en arquitecturas de bajo nivel.
+\subsection{7. Tipo de instrucciones predominantes}
+Se usaron predominantemente instrucciones tipo \textbf{I} (\texttt{addi}, \texttt{lw}, \texttt{sw}, \texttt{bge}), ya que los algoritmos de ordenamiento requieren manipulación constante de direcciones de memoria mediante offsets y saltos condicionales para los bucles. Las tipo \textbf{R} (\texttt{add}, \texttt{sub}, \texttt{sll}) se usaron para el cálculo de direcciones indexadas.
+
+\subsection{8. Abuso de instrucciones de salto}
+El abuso de instrucciones \texttt{j}, \texttt{beq} o \texttt{bne} fractura la localidad espacial del código y provoca vaciados constantes de la tubería (\textit{Pipeline Flushes}). Esto reduce drásticamente las Instrucciones por Ciclo (IPC), haciendo que la ejecución sea mucho más lenta comparada con código lineal.
+
+\subsection{9. Ventajas del modelo RISC}
+El conjunto de instrucciones reducido (RISC) de MIPS facilita que el hardware sea predecible. Al tener instrucciones de tamaño fijo (32 bits) y una arquitectura de carga/almacenamiento (\textit{load/store}), simplifica la construcción de compiladores y optimiza la etapa de decodificación (\textbf{ID}).
+
+\subsection{10. Uso del modo de ejecución paso a paso en MARS}
+El uso de \textbf{F7 (Step)} permitió aislar la lógica. Se verificó cómo la pila (\texttt{\$sp}) decrecía dinámicamente en las llamadas recursivas y se confirmó que el intercambio de valores (\textit{swap}) en la partición de Quicksort manipulaba las direcciones correctas sin corromper la memoria circundante.
+
+\subsection{11. Herramienta más útil en MARS}
+El panel derecho de \textbf{Registers} fue esencial para monitorear contadores, y el \textbf{Data Segment} (Memoria) permitió visualizar en tiempo real cómo el arreglo de enteros se iba modificando e intercambiando en cada iteración de los ciclos.
+
+\subsection{12. Visualización del camino de datos tipo R}
+En MARS, puede usarse la herramienta \textit{Tools > MIPS X-Ray}. Para una instrucción tipo R (ej. \texttt{add}), se vería el flujo saliendo del banco de registros, pasando por la ALU, omitiendo la memoria de datos y retornando a través del multiplexor de \textit{Write Back} hacia los registros.
+
+\subsection{13. Visualización del camino de datos tipo I}
+Para una instrucción \texttt{lw}, el camino muestra a la ALU calculando la dirección efectiva (registro base + offset extendido), luego el flujo ingresa a la Memoria de Datos, activa la señal de lectura y finalmente el dato fluye por el multiplexor final hacia el banco de registros.
+
+\subsection{14. Justificación del algoritmo alternativo}
+La elección entre algoritmos depende del contexto: Quicksort es preferible en MIPS32 para sistemas integrados con memoria limitada, debido a su eficiencia de memoria (\textit{in-place}). Mergesort se justificaría si la estabilidad del ordenamiento y la garantía de $O(n \log n)$ son críticas y la memoria RAM no es un limitante.
+
+\subsection{15. Análisis y Discusión de los Resultados}
+Se evidenció que la implementación de recursividad profunda en ensamblador exige una gestión meticulosa de la pila. Un solo error en el \textit{offset} del \texttt{\$sp} corrompe el flujo del programa. Ambos algoritmos lograron ordenar los datos correctamente, pero el monitoreo en MARS confirmó que Mergesort requiere mayor número de instrucciones de carga/almacenamiento (\texttt{lw}/\texttt{sw}) debido al trasvase constante entre el arreglo principal y el temporal.
 
 \end{document}

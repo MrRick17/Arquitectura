@@ -1,0 +1,158 @@
+.data
+arreglo: .word 8, 3, 7, 4, 9, 2, 6, 5  # Arreglo a ordenar
+temp:    .space 32                     # Arreglo temporal (8 enteros * 4 bytes)
+longitud: .word 8
+espacio: .asciiz " "
+
+.text
+.globl main
+
+main:
+    la $a0, arreglo
+    li $a1, 0               # low = 0
+    lw $t0, longitud
+    addi $a2, $t0, -1       # high = longitud - 1
+    
+    jal mergesort
+    
+    # Imprimir arreglo
+    la $t0, arreglo
+    lw $t1, longitud
+    li $t2, 0
+imprimir_loop:
+    beq $t2, $t1, fin_main
+    lw $a0, 0($t0)
+    li $v0, 1
+    syscall
+    la $a0, espacio
+    li $v0, 4
+    syscall
+    addi $t0, $t0, 4
+    addi $t2, $t2, 1
+    j imprimir_loop
+
+fin_main:
+    li $v0, 10
+    syscall
+
+# ----------------------------------------
+# Función: mergesort($a0 = base, $a1 = low, $a2 = high)
+# ----------------------------------------
+mergesort:
+    bge $a1, $a2, ms_fin    # Caso base: low >= high
+
+    # Prólogo
+    addi $sp, $sp, -16
+    sw $ra, 12($sp)
+    sw $a0, 8($sp)
+    sw $a1, 4($sp)
+    sw $a2, 0($sp)
+
+    # Calcular mid = low + (high - low) / 2
+    sub $t0, $a2, $a1
+    srl $t0, $t0, 1
+    add $s0, $a1, $t0       # $s0 = mid
+
+    # mergesort(arr, low, mid)
+    move $a2, $s0
+    jal mergesort
+
+    # mergesort(arr, mid + 1, high)
+    lw $a0, 8($sp)
+    addi $a1, $s0, 1
+    lw $a2, 0($sp)
+    jal mergesort
+
+    # merge(arr, low, mid, high)
+    lw $a0, 8($sp)
+    lw $a1, 4($sp)
+    move $a2, $s0           # arg3: mid
+    lw $a3, 0($sp)          # arg4: high
+    jal merge
+
+    # Epílogo
+    lw $ra, 12($sp)
+    addi $sp, $sp, 16
+ms_fin:
+    jr $ra
+
+# ----------------------------------------
+# Función: merge($a0 = base, $a1 = low, $a2 = mid, $a3 = high)
+# ----------------------------------------
+merge:
+    la $t0, temp            # Base temporal
+    move $t1, $a1           # i = low
+    addi $t2, $a2, 1        # j = mid + 1
+    move $t3, $a1           # k = low
+
+merge_loop1:
+    bgt $t1, $a2, merge_loop2 # if i > mid
+    bgt $t2, $a3, merge_loop2 # if j > high
+
+    # Leer arr[i]
+    sll $t4, $t1, 2
+    add $t4, $a0, $t4
+    lw $t5, 0($t4)
+
+    # Leer arr[j]
+    sll $t6, $t2, 2
+    add $t6, $a0, $t6
+    lw $t7, 0($t6)
+
+    ble $t5, $t7, copy_i
+    # copy_j
+    sll $t8, $t3, 2
+    add $t8, $t0, $t8
+    sw $t7, 0($t8)
+    addi $t2, $t2, 1
+    j merge_next
+
+copy_i:
+    sll $t8, $t3, 2
+    add $t8, $t0, $t8
+    sw $t5, 0($t8)
+    addi $t1, $t1, 1
+
+merge_next:
+    addi $t3, $t3, 1
+    j merge_loop1
+
+merge_loop2:
+    bgt $t1, $a2, merge_loop3
+    sll $t4, $t1, 2
+    add $t4, $a0, $t4
+    lw $t5, 0($t4)
+    sll $t8, $t3, 2
+    add $t8, $t0, $t8
+    sw $t5, 0($t8)
+    addi $t1, $t1, 1
+    addi $t3, $t3, 1
+    j merge_loop2
+
+merge_loop3:
+    bgt $t2, $a3, copy_back
+    sll $t6, $t2, 2
+    add $t6, $a0, $t6
+    lw $t7, 0($t6)
+    sll $t8, $t3, 2
+    add $t8, $t0, $t8
+    sw $t7, 0($t8)
+    addi $t2, $t2, 1
+    addi $t3, $t3, 1
+    j merge_loop3
+
+copy_back:
+    move $t1, $a1           # i = low
+copy_loop:
+    bgt $t1, $a3, merge_end
+    sll $t8, $t1, 2
+    add $t8, $t0, $t8
+    lw $t5, 0($t8)          # Leer de temp
+    sll $t4, $t1, 2
+    add $t4, $a0, $t4
+    sw $t5, 0($t4)          # Escribir en arr
+    addi $t1, $t1, 1
+    j copy_loop
+
+merge_end:
+    jr $ra

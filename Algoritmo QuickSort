@@ -1,0 +1,120 @@
+.data
+arreglo: .word 8, 3, 7, 4, 9, 2, 6, 5  # Arreglo desordenado
+longitud: .word 8                      # Tamaño del arreglo
+espacio: .asciiz " "
+newline: .asciiz "\n"
+
+.text
+.globl main
+
+main:
+    # Preparar argumentos para quicksort(arreglo, 0, longitud-1)
+    la $a0, arreglo
+    li $a1, 0               # low = 0
+    lw $t0, longitud
+    addi $a2, $t0, -1       # high = longitud - 1
+    
+    jal quicksort           # Llamar a Quicksort
+    
+    # Imprimir arreglo ordenado
+    la $t0, arreglo
+    lw $t1, longitud
+    li $t2, 0               # Índice = 0
+imprimir_loop:
+    beq $t2, $t1, fin_main
+    lw $a0, 0($t0)
+    li $v0, 1
+    syscall
+    la $a0, espacio
+    li $v0, 4
+    syscall
+    addi $t0, $t0, 4
+    addi $t2, $t2, 1
+    j imprimir_loop
+
+fin_main:
+    li $v0, 10
+    syscall
+
+# ----------------------------------------
+# Función: quicksort($a0 = base, $a1 = low, $a2 = high)
+# ----------------------------------------
+quicksort:
+    bge $a1, $a2, qs_fin    # Caso base: si low >= high, retornar
+
+    # Prólogo
+    addi $sp, $sp, -16
+    sw $ra, 12($sp)
+    sw $a0, 8($sp)
+    sw $a1, 4($sp)
+    sw $a2, 0($sp)
+
+    # Llamar a partition
+    jal partition           # Retorna pivote en $v0
+    move $s0, $v0           # $s0 = pivote
+
+    # quicksort(arr, low, pivote - 1)
+    lw $a0, 8($sp)
+    lw $a1, 4($sp)
+    addi $a2, $s0, -1
+    jal quicksort
+
+    # quicksort(arr, pivote + 1, high)
+    lw $a0, 8($sp)
+    addi $a1, $s0, 1
+    lw $a2, 0($sp)
+    jal quicksort
+
+    # Epílogo
+    lw $ra, 12($sp)
+    addi $sp, $sp, 16
+qs_fin:
+    jr $ra
+
+# ----------------------------------------
+# Función: partition($a0 = base, $a1 = low, $a2 = high)
+# ----------------------------------------
+partition:
+    # Calcular dirección del pivote: base + (high * 4)
+    sll $t0, $a2, 2
+    add $t0, $a0, $t0
+    lw $t1, 0($t0)          # $t1 = pivote (valor)
+
+    addi $t2, $a1, -1       # i = low - 1 ($t2)
+    move $t3, $a1           # j = low ($t3)
+
+part_loop:
+    bge $t3, $a2, part_end  # si j >= high, salir del loop
+    
+    # Leer arr[j]
+    sll $t4, $t3, 2
+    add $t4, $a0, $t4
+    lw $t5, 0($t4)
+    
+    bgt $t5, $t1, part_next # si arr[j] > pivote, saltar
+    
+    # arr[j] <= pivote -> incrementar i y hacer swap(arr[i], arr[j])
+    addi $t2, $t2, 1
+    sll $t6, $t2, 2
+    add $t6, $a0, $t6
+    lw $t7, 0($t6)          # $t7 = arr[i]
+    
+    sw $t5, 0($t6)          # arr[i] = arr[j]
+    sw $t7, 0($t4)          # arr[j] = arr[i] anterior
+
+part_next:
+    addi $t3, $t3, 1        # j++
+    j part_loop
+
+part_end:
+    # swap(arr[i+1], arr[high])
+    addi $t2, $t2, 1        # i + 1
+    sll $t6, $t2, 2
+    add $t6, $a0, $t6
+    lw $t7, 0($t6)          # arr[i+1]
+    
+    sw $t1, 0($t6)          # arr[i+1] = pivote
+    sw $t7, 0($t0)          # arr[high] = arr[i+1] anterior
+    
+    move $v0, $t2           # retornar i + 1
+    jr $ra

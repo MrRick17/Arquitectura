@@ -1,0 +1,47 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.54cm}
+
+\title{Práctica de Laboratorio 3: Entrada/Salida mediante Sondeo (MMIO)}
+\author{Richard Vasquez}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Respuestas al Cuestionario}
+
+\subsection{1. Organización de la memoria y uso de lw/sw}
+En el mapeo de E/S en memoria (Memory-Mapped I/O), se reserva un segmento específico del espacio de direcciones físicas de la memoria principal exclusivamente para los registros de control y datos de los periféricos. Generalmente, esta región se ubica en el espacio del sistema (por ejemplo, en MIPS se usa el segmento \texttt{kseg1}, típicamente alrededor de la dirección \texttt{0xFFFF0000}). La implicación directa es que las instrucciones estándar de lectura y escritura (\texttt{lw} y \texttt{sw}) se utilizan para comunicarse con el hardware de E/S, en lugar de acceder a la memoria RAM.
+
+\subsection{2. Memory-Mapped I/O vs. E/S por Puertos}
+La E/S por puertos utiliza un espacio de direcciones aislado y requiere instrucciones dedicadas (como \texttt{IN} y \texttt{OUT} en x86). 
+\begin{itemize}
+    \item \textbf{Ventajas MMIO:} Reutiliza las mismas instrucciones de memoria, simplificando la Unidad de Control del CPU.
+    \item \textbf{Desventajas MMIO:} Consume espacio de direcciones que podría usarse para RAM.
+    \item \textbf{Por qué MIPS lo usa:} MIPS es una arquitectura RISC (Conjunto de Instrucciones Reducido). Al usar MMIO, MIPS evita agregar nuevas instrucciones al hardware, manteniendo la pureza y velocidad de decodificación de su filosofía RISC.
+\end{itemize}
+
+\subsection{3. Solapamiento de direcciones}
+Si dos dispositivos comparten direcciones, ocurrirá una colisión en el bus de datos (corrupción de datos) o comportamiento indefinido de hardware. Esto se evita estrictamente mediante el diseño del \textit{Mapa de Memoria} (Address Decoder), un circuito físico que garantiza que señales de selección de chip (Chip Select) sean mutuamente excluyentes para cada periférico.
+
+\subsection{4. Simplificación del diseño de instrucciones (ISA)}
+El MMIO permite que el procesador hable con el teclado o el disco duro exactamente como habla con la RAM. Si usara E/S por puertos, MIPS requeriría un nuevo formato de instrucción, nuevos canales en el camino de datos y las instrucciones hipotéticas \texttt{in \$rt, puerto} y \texttt{out puerto, \$rt}.
+
+\subsection{5. Funcionamiento del Bus de Datos y Direcciones}
+Cuando el procesador emite una dirección (ej. \texttt{0xFFFF0000}), esta viaja por el Bus de Direcciones. Un componente de hardware llamado decodificador de direcciones (\textit{Address Decoder}) detecta que este rango pertenece a un periférico. Automáticamente, el decodificador envía una señal lógica (Chip Select) al controlador del periférico y deshabilita temporalmente la conexión física con la memoria RAM, asegurando que solo el dispositivo responda en el Bus de Datos.
+
+\subsection{6. Acceso sin privilegios y protección}
+Normalmente, un programa de usuario no puede acceder a MMIO porque estas direcciones están en un segmento del kernel (\texttt{kseg}). La MMU (Memory Management Unit) generará una excepción (Fallo de Segmentación) si lo intenta. Los programas se comunican con el hardware usando \texttt{syscalls} (Llamadas al Sistema), dejando que el Sistema Operativo, que tiene permisos, haga el acceso físico.
+
+\subsection{7. Alternativas a la espera activa}
+Para evitar el uso del "Sondeo" (bucle infinito gastando ciclos de CPU), se emplean:
+1. \textbf{Interrupciones (Interrupt-Driven I/O):} El hardware avisa al CPU asíncronamente cuando está listo.
+2. \textbf{DMA (Acceso Directo a Memoria):} Un controlador especial transfiere datos del dispositivo a la RAM sin intervención de la CPU.
+
+\subsection{8. Análisis y Discusión de los Resultados}
+Se evidenció que la técnica de \textit{Polling} programada en MIPS32 (\texttt{beq \$t1, \$zero, espera}) es funcional pero altamente ineficiente, ya que el procesador queda "secuestrado" iterando sobre la misma línea de código, impidiendo el procesamiento de otras tareas (desperdicio de ciclos de reloj). Sin embargo, es fácil de implementar y útil en sistemas dedicados muy simples.
+
+\end{document}

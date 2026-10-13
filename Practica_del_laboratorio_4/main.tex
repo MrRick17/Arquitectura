@@ -1,0 +1,72 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.54cm}
+
+\title{Práctica de Laboratorio 4: Gestión de Interrupciones y Excepciones}
+\author{Richard Vasquez}
+
+\begin{document}
+\maketitle
+
+\section{Respuestas al Cuestionario}
+
+\subsection{1. Ciclo de Interrupción de Hardware}
+(El diagrama lógico conceptual es el siguiente):
+1) \textbf{Evento:} El usuario presiona una tecla. El hardware levanta una línea de IRQ (Interrupt Request).
+2) \textbf{CPU Acepta:} El CPU termina de ejecutar la instrucción actual en el pipeline.
+3) \textbf{Respaldo PC:} Se guarda la dirección de la siguiente instrucción en el registro \texttt{EPC} (Coprocesador 0, reg \$14).
+4) \textbf{Salto al Kernel:} El PC se fuerza a la dirección \texttt{0x80000180} (Vector de Excepción).
+5) \textbf{Rutina (ISR):} Se ejecuta el código para leer la tecla y guardarla.
+6) \textbf{Retorno:} La instrucción \texttt{eret} restaura el PC desde el \texttt{EPC}, volviendo al programa original invisiblemente.
+
+\subsection{2. Sondeo (Polling) vs. Interrupciones}
+El sondeo obliga al procesador a preguntar repetidamente al dispositivo si necesita atención (espera activa, desperdicia energía y CPU). Las interrupciones permiten al procesador ejecutar otras tareas y es el dispositivo quien envía una señal eléctrica (IRQ) a la CPU solo cuando hay datos listos o sucede un evento.
+
+\subsection{3. Ventajas de las Interrupciones}
+Minimizan el uso de CPU en tareas de espera, reducen drásticamente el consumo de energía y permiten la creación de Sistemas Operativos multitarea, donde la CPU puede atender múltiples procesos y periféricos aparentemente al mismo tiempo.
+
+\subsection{4. Registros especiales en MIPS32 (Coprocesador 0)}
+\begin{itemize}
+    \item \texttt{Status (\$12):} Controles de máscara para habilitar o deshabilitar interrupciones globales.
+    \item \texttt{Cause (\$13):} Indica el código del motivo por el cual ocurrió la excepción o interrupción.
+    \item \texttt{EPC (\$14):} (Exception Program Counter) Guarda la dirección a la cual retornar al terminar.
+\end{itemize}
+
+\subsection{5. Necesidad de guardar el contexto}
+La Rutina de Servicio (ISR) utiliza registros de uso general para trabajar (ej. \texttt{\$t0, \$t1}). Si no respaldamos los valores que estos registros tenían antes de la interrupción, corromperemos los datos del programa principal, causando un comportamiento impredecible al ejecutar \texttt{eret}.
+
+\subsection{6. Excepciones en MIPS32}
+\textbf{a) Situaciones:} 1. Desbordamiento aritmético en suma (\texttt{add}). 2. Llamada al sistema (\texttt{syscall}). 3. Fallo de dirección (intentar acceder a memoria no alineada o prohibida). 4. Opcode inválido (instrucción desconocida).\\
+\textbf{b) Etapas del Pipeline:}
+\begin{itemize}
+    \item \textbf{IF (Búsqueda):} Falla si el PC intenta leer de una dirección no permitida (Instruction Address Exception).
+    \item \textbf{ID (Decodificación):} Falla si la instrucción no existe.
+    \item \textbf{EX (Ejecución):} Falla por desbordamiento aritmético en la ALU.
+    \item \textbf{MEM (Memoria):} Falla en un \texttt{lw/sw} si la dirección de datos no está alineada.
+\end{itemize}
+
+\subsection{7. Estrategias de tratamiento}
+\textbf{a) Diferencias:} Las \textbf{Interrupciones} son asíncronas porque provienen de hardware externo y pueden ocurrir en cualquier ciclo de reloj. Las \textbf{Excepciones} son síncronas; son causadas directamente por la instrucción que se está ejecutando en ese momento.\\
+\textbf{b) Ejecución y EPC:} En MIPS32 clásico, todas las excepciones redirigen a un único manejador (\texttt{0x80000180}). Allí, el software lee el registro \texttt{Cause} para derivar la ejecución (Estrategia centralizada). El registro \texttt{EPC} sirve para saber dónde retomar el hilo principal (usando \texttt{eret}).
+
+\subsection{8. Habilitación de interrupciones}
+\textbf{a) Habilitación:}
+\begin{itemize}
+    \item \textbf{Teclado:} Escribiendo \texttt{1} en el bit 1 del registro \texttt{0xFFFF0000} (Receiver Control).
+    \item \textbf{Procesador:} Configurando en \texttt{1} el Bit 0 (Interrupt Enable) del registro \texttt{Status} (\$12 del Coproc 0).
+\end{itemize}
+\textbf{b) Procesador aislado:} Si se habilitan en el dispositivo pero no en el registro \texttt{Status} de la CPU, las interrupciones quedan "enmascaradas". El periférico enviará la señal, pero el procesador simplemente la ignorará.
+
+\subsection{9. Procesamiento de interrupciones de Reloj}
+\textbf{a) Paso a paso:} El temporizador llega a cero (Hardware) $\rightarrow$ Envía IRQ al procesador $\rightarrow$ CPU pasa control a \texttt{0x80000180} $\rightarrow$ ISR del sistema operativo (Software) incrementa contador de "Ticks" $\rightarrow$ ISR usa \texttt{eret} para volver. Se guardan los registros temporales y el PC.\\
+\textbf{b) Importancia:} Proteger la transparencia. El programa interrumpido nunca debe darse cuenta de que el procesador se detuvo para atender el reloj.
+
+\subsection{10. Interrupciones de reloj y control de ejecución}
+\textbf{a) Uso del reloj:} Permite implementar el "Time Slicing" (Planificación). El SO configura el reloj cada X milisegundos. Si un programa está en un bucle infinito, el reloj interrumpe a la fuerza y el SO le quita el control del CPU para dárselo a otro proceso.\\
+\textbf{b) Terminación temprana:} Si el programa finaliza antes, ejecuta un \texttt{syscall} de salida (ej. \texttt{exit}). El SO retoma el control, cancela el temporizador de ese programa y reprograma el reloj para el siguiente proceso.
+
+\subsection{11. Análisis y Discusión de los Resultados}
+Se demostró en MARS la superioridad de la asincronía. Mientras el bucle principal (`main`) ejecutaba un chequeo del tiempo (`syscall 30`), el programa era capaz de registrar pulsaciones de teclado en segundo plano sin interrumpir su conteo de 20 segundos. El uso de la directiva `.ktext` permitió aislar la lógica de recolección de teclado (buffer) protegiendo el flujo principal de ejecución.
+\end{document}
